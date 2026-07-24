@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import {SearchResult} from "../../types.js";
-import {buildAxiosRequestOptions} from "../../utils/httpRequest.js";
+import {buildAxiosRequestOptions, requestWithSafeRedirects} from "../../utils/httpRequest.js";
 
 export function isTrustedDuckDuckGoPreloadUrl(value: string): boolean {
   try {
@@ -68,7 +68,12 @@ export async function searchDuckDuckGo(query: string, limit: number): Promise<Se
       });
 
       const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&t=h_&ia=web`;
-      const response = await axios.get(searchUrl, requestOptions);
+      // Use requestWithSafeRedirects to follow 302 redirects from DuckDuckGo
+      const response = await requestWithSafeRedirects('GET', searchUrl, {
+        ...requestOptions,
+        maxRedirects: 5,
+        validateStatus: (s) => s >= 200 && s < 400,
+      });
 
       let basePreloadUrl = '';
 
